@@ -3,107 +3,134 @@
 <head>
   <meta charset="UTF-8">
   <title>实验室器材管理系统</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f8; }
+    h1 { color: #333; }
+    form { background: #fff; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
+    input, textarea { margin: 5px; padding: 8px; width: 180px; }
+    button { padding: 8px 16px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; }
+    button:hover { opacity: 0.9; }
+    table { border-collapse: collapse; width: 100%; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background: #007bff; color: white; }
+    tr:nth-child(even) { background: #f9f9f9; }
+  </style>
 </head>
-<body class="bg-light">
-  <div class="container py-4">
-    <h2 class="mb-4">实验室器材管理系统（共享数据库版）</h2>
+<body>
+  <h1>实验室器材管理系统</h1>
 
-    <!-- 表单 -->
-    <form id="itemForm" class="row g-3 mb-4">
-      <div class="col-md-2"><input type="date" class="form-control" name="time" required></div>
-      <div class="col-md-2"><input type="text" class="form-control" name="name" placeholder="元件名称" required></div>
-      <div class="col-md-2"><input type="text" class="form-control" name="model" placeholder="型号"></div>
-      <div class="col-md-2"><input type="text" class="form-control" name="param" placeholder="主要参数"></div>
-      <div class="col-md-2"><input type="text" class="form-control" name="factory" placeholder="厂家"></div>
-      <div class="col-md-1"><input type="number" class="form-control" name="price" placeholder="单价" required></div>
-      <div class="col-md-1"><input type="number" class="form-control" name="count" placeholder="数量" required></div>
-      <div class="col-md-2"><input type="text" class="form-control" name="person" placeholder="办理人"></div>
-      <div class="col-md-2"><input type="text" class="form-control" name="location" placeholder="存放地点"></div>
-      <div class="col-md-2"><input type="text" class="form-control" name="note" placeholder="备注"></div>
-      <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">添加</button></div>
-    </form>
+  <form id="itemForm">
+    <input type="date" id="time" required>
+    <input type="text" id="name" placeholder="元件名称" required>
+    <input type="text" id="model" placeholder="型号">
+    <input type="text" id="param" placeholder="主要参数">
+    <input type="text" id="factory" placeholder="厂家">
+    <input type="number" id="price" placeholder="单价/元" step="0.01">
+    <input type="number" id="count" placeholder="数量">
+    <input type="text" id="person" placeholder="办理人">
+    <input type="text" id="location" placeholder="存放地点">
+    <input type="text" id="note" placeholder="备注">
+    <button type="submit" style="background:#28a745;color:white;">添加</button>
+  </form>
 
-    <!-- 搜索 -->
-    <div class="mb-3">
-      <input id="searchBox" type="text" class="form-control" placeholder="搜索器材...">
-    </div>
+  <table>
+    <thead>
+      <tr>
+        <th>采购时间</th><th>元件名称</th><th>型号</th><th>主要参数</th>
+        <th>厂家</th><th>单价/元</th><th>数量</th><th>总价/元</th>
+        <th>办理人</th><th>存放地点</th><th>备注</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="itemsTable"></tbody>
+  </table>
 
-    <!-- 表格 -->
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>采购时间</th><th>元件名称</th><th>型号</th><th>主要参数</th>
-          <th>厂家</th><th>单价</th><th>数量</th><th>总价</th>
-          <th>办理人</th><th>存放地点</th><th>备注</th><th>操作</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
+  <script>
+    // ✅ 替换为你的 Supabase 项目信息
+    const SUPABASE_URL = "https://nsrrcrrbtwvtuvmtifdu.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zcnJjcnJidHd2dHV2bXRpZmR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyOTMzMzEsImV4cCI6MjA3MTg2OTMzMX0.bDvJ1uUoXUD__YSGLIZ6INC7NQ0BP0YFSwTDS1nC7J8";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-<script>
-const SUPABASE_URL = "https://nsrrcrrbtwvtuvmtifdu.supabase.co";  // ← 替换
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zcnJjcnJidHd2dHV2bXRpZmR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyOTMzMzEsImV4cCI6MjA3MTg2OTMzMX0.bDvJ1uUoXUD__YSGLIZ6INC7NQ0BP0YFSwTDS1nC7J8";     // ← 替换
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // 绑定表单提交事件
+    document.getElementById("itemForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-const form = document.getElementById("itemForm");
-const tableBody = document.getElementById("tableBody");
-const searchBox = document.getElementById("searchBox");
+      const data = {
+        time: document.getElementById("time").value,
+        name: document.getElementById("name").value,
+        model: document.getElementById("model").value,
+        param: document.getElementById("param").value,
+        factory: document.getElementById("factory").value,
+        price: parseFloat(document.getElementById("price").value) || 0,
+        count: parseInt(document.getElementById("count").value) || 0,
+        person: document.getElementById("person").value,
+        location: document.getElementById("location").value,
+        note: document.getElementById("note").value
+      };
 
-async function loadItems() {
-  let { data, error } = await supabase.from("items").select("*").order("id", { ascending: false });
-  if (error) { alert("加载失败：" + error.message); return; }
+      console.log("准备插入数据:", data);
 
-  const keyword = searchBox.value.trim().toLowerCase();
-  tableBody.innerHTML = "";
-  data.forEach(item => {
-    if (!keyword || JSON.stringify(item).toLowerCase().includes(keyword)) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${item.time || ""}</td>
-        <td>${item.name || ""}</td>
-        <td>${item.model || ""}</td>
-        <td>${item.param || ""}</td>
-        <td>${item.factory || ""}</td>
-        <td>${item.price || ""}</td>
-        <td>${item.count || ""}</td>
-        <td>${(item.price * item.count).toFixed(2)}</td>
-        <td>${item.person || ""}</td>
-        <td>${item.location || ""}</td>
-        <td>${item.note || ""}</td>
-        <td><button class="btn btn-sm btn-danger" onclick="deleteItem(${item.id})">删除</button></td>
-      `;
-      tableBody.appendChild(tr);
+      const { data: newData, error } = await supabase
+        .from("items")
+        .insert([data])
+        .select();
+
+      if (error) {
+        console.error("插入失败:", error);
+        alert("保存失败: " + error.message);
+      } else {
+        console.log("插入成功:", newData);
+        alert("保存成功!");
+        loadItems();
+        e.target.reset();
+      }
+    });
+
+    // 读取表格数据
+    async function loadItems() {
+      const { data, error } = await supabase.from("items").select("*").order("id", { ascending: false });
+      if (error) {
+        console.error("读取失败:", error);
+        return;
+      }
+
+      const table = document.getElementById("itemsTable");
+      table.innerHTML = "";
+      data.forEach(item => {
+        const row = `<tr>
+          <td>${item.time || ""}</td>
+          <td>${item.name || ""}</td>
+          <td>${item.model || ""}</td>
+          <td>${item.param || ""}</td>
+          <td>${item.factory || ""}</td>
+          <td>${item.price || 0}</td>
+          <td>${item.count || 0}</td>
+          <td>${(item.price * item.count).toFixed(2)}</td>
+          <td>${item.person || ""}</td>
+          <td>${item.location || ""}</td>
+          <td>${item.note || ""}</td>
+          <td><button onclick="deleteItem(${item.id})" style="background:#dc3545;color:white;">删除</button></td>
+        </tr>`;
+        table.innerHTML += row;
+      });
     }
-  });
-}
 
-form.addEventListener("submit", async e => {
-  e.preventDefault();
-  const data = Object.fromEntries(new FormData(form).entries());
-  data.price = parseFloat(data.price);
-  data.count = parseInt(data.count);
+    // 删除数据
+    async function deleteItem(id) {
+      if (!confirm("确认删除该记录吗？")) return;
 
-  const { error } = await supabase.from("items").insert([data]);
-  if (error) { alert("保存失败：" + error.message); return; }
+      const { error } = await supabase.from("items").delete().eq("id", id);
+      if (error) {
+        console.error("删除失败:", error);
+        alert("删除失败: " + error.message);
+      } else {
+        alert("删除成功!");
+        loadItems();
+      }
+    }
 
-  form.reset();
-  await loadItems();
-});
-
-async function deleteItem(id) {
-  if (!confirm("确定删除该记录吗？")) return;
-  const { error } = await supabase.from("items").delete().eq("id", id);
-  if (error) { alert("删除失败：" + error.message); return; }
-  await loadItems();
-}
-
-searchBox.addEventListener("input", loadItems);
-
-// 初次加载
-loadItems();
-</script>
+    // 页面加载时读取数据
+    loadItems();
+  </script>
 </body>
 </html>
